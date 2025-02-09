@@ -1,0 +1,58 @@
+name: Build and Publish Wheels
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13.1'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade scikit-build-core nanobind build ninja cibuildwheel auditwheel
+
+    - name: Fetch TDLib version and commit hash
+      id: vars
+      run: |
+        git clone --depth 1 https://github.com/tdlib/td
+        cd td
+        echo "LATEST_TDLIB_COMMIT_HASH=$(git log -1 --pretty=%H)" >> $GITHUB_OUTPUT
+        echo "LATEST_TDLIB_VERSION=$(sed -nr 's/project\(TDLib VERSION ([0-9\.]+) LANGUAGES CXX C\)/\1/p' CMakeLists.txt)" >> $GITHUB_OUTPUT
+
+    - name: Update pyproject.toml and README.md with latest TDLib version
+      run: |
+        LATEST_TDLIB_VERSION=${{ steps.vars.outputs.LATEST_TDLIB_VERSION }}
+
+        sed -i -r "s/^version = \".*\"/version = \"$LATEST_TDLIB_VERSION\"/" pyproject.toml
+        sed -i -r "s/^__version__ = \".*\"/__version__ = \"$LATEST_TDLIB_VERSION\"/" tdjson/__init__.py
+
+        sed -i -r "s|(https://img.shields.io/badge/TDLib-v)[0-9\.]+(-blue)|\\1$LATEST_TDLIB_VERSION\\2|" README.md
+
+    - name: Commit updated files
+      uses: EndBug/add-and-commit@v9
+      with:
+        message: "Update TDLib to ${{ steps.vars.outputs.LATEST_TDLIB_VERSION }} (tdlib/td@${{ steps.vars.outputs.LATEST_TDLIB_COMMIT_HASH }})"
+        add: '["pyproject.toml", "README.md", "tdjson/__init__.py"]'
+        committer_name: GitHub Actions
+        committer_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+    - name: Build wheels
+      run: |
+        mkdir -p dist
+        python -m cibuildwheel .
+        mv ./wheelhouse/*.whl dist/
+        ls dist/
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
