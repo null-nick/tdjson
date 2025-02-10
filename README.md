@@ -1,6 +1,6 @@
 # tdjson [![Version](https://img.shields.io/pypi/v/Tdjson?style=flat&logo=pypi)](https://pypi.org/project/Tdjson) [![TDLib version](https://img.shields.io/badge/TDLib-v1.8.44-blue?logo=telegram)](https://github.com/tdlib/td) [![Downloads](https://static.pepy.tech/personalized-badge/tdjson?period=month&units=none&left_color=grey&right_color=brightgreen&left_text=Downloads)](https://pepy.tech/project/tdjson)
 
-`tdjson` is a high-performance Python binding for [TDLib](https://github.com/tdlib/td)'s JSON interface. Outperforms `ctypes`, and **includes** `TDLib` for easy setup and use
+`tdjson` is a high-performance Python binding for [TDLib](https://github.com/tdlib/td)'s JSON interface. Outperforms `ctypes`, and **includes** `TDLib` for easy setup and use. Mainly created for [Pytdbot](https://github.com/pytdbot/client)
 
 ## Compatibility
 
