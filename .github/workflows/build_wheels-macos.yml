@@ -1,0 +1,62 @@
+name: Build TDLib for macOS
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish on PyPI?"
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13.1'
+
+    - name: Install macOS dependencies
+      run: |
+        brew install gperf cmake openssl
+
+    - name: Fetch TDLib version and commit hash
+      id: vars
+      run: |
+        git clone --depth 1 https://github.com/tdlib/td
+        cd td
+        echo "LATEST_TDLIB_COMMIT_HASH=$(git log -1 --pretty=%H)" >> $GITHUB_ENV
+        echo "LATEST_TDLIB_VERSION=$(sed -nr 's/project\(TDLib VERSION ([0-9\.]+) LANGUAGES CXX C\)/\1/p' CMakeLists.txt)" >> $GITHUB_ENV
+
+    - name: Update pyproject.toml and README.md with latest TDLib version
+      run: |
+        sed -i '' -E "s/^version = \".*\"/version = \"$LATEST_TDLIB_VERSION\"/" pyproject.toml
+        sed -i '' -E "s/^__version__ = \".*\"/__version__ = \"$LATEST_TDLIB_VERSION\"/" tdjson/__init__.py
+        sed -i '' -E "s|(https://img.shields.io/badge/TDLib-v)[0-9\.]+(-blue)|\1$LATEST_TDLIB_VERSION\2|" README.md
+
+    - name: Commit updated files
+      uses: EndBug/add-and-commit@v9
+      with:
+        message: "Update TDLib to ${{ env.LATEST_TDLIB_VERSION }} (tdlib/td@${{ env.LATEST_TDLIB_COMMIT_HASH }})"
+        add: '["pyproject.toml", "README.md", "tdjson/__init__.py"]'
+        committer_name: GitHub Actions
+        committer_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+    - name: Build wheels
+      run: |
+        mkdir -p dist
+        python -m cibuildwheel .
+        mv ./wheelhouse/*.whl dist/
+        ls dist/
+
+    - name: Publish to PyPI
+      if: github.event.inputs.publish == 'true'
+      uses: pypa/gh-action-pypi-publish@release/v1
