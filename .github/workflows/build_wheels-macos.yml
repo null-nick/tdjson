@@ -50,6 +50,12 @@ jobs:
         committer_name: GitHub Actions
         committer_email: 41898282+github-actions[bot]@users.noreply.github.com
 
+    - name: Install dependencies
+      run: |
+        python3 -m ensurepip --default-pip
+        python3 -m pip install --upgrade pip
+        python3 -m pip install --upgrade scikit-build-core nanobind build ninja cibuildwheel auditwheel
+
     - name: Build wheels
       run: |
         mkdir -p dist
